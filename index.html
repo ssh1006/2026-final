@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>七层三跨框架内力与配筋计算工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#0FC6C2',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        dark: '#1D2129',
+                        light: '#F2F3F5'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .input-focus {
+                @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none;
+            }
+            .card-shadow {
+                @apply shadow-lg shadow-gray-200/50 hover:shadow-xl hover:shadow-gray-200/70 transition-all duration-300;
+            }
+            .btn-primary {
+                @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 active:bg-primary/80 transition-all duration-200 shadow-md hover:shadow-lg;
+            }
+            .btn-secondary {
+                @apply bg-white border border-gray-300 text-dark px-4 py-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-all duration-200;
+            }
+            .tab-active {
+                @apply bg-primary text-white border-primary;
+            }
+            .status-success {
+                @apply text-success bg-green-50 border border-green-200;
+            }
+            .status-pending {
+                @apply text-gray-500 bg-gray-50 border border-gray-200;
+            }
+            .step-number {
+                @apply w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold mr-2;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-dark min-h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-building text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-dark">七层三跨框架内力与配筋计算工具</h1>
+            </div>
+            <div class="hidden md:flex items-center space-x-4">
+                <span class="text-sm text-gray-500">基于GB 50010-2010(2015版)</span>
+                <button id="resetBtn" class="btn-secondary text-sm">
+                    <i class="fa fa-refresh mr-1"></i>重置
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-6">
+        <!-- 框架示意图 -->
+        <div class="bg-white rounded-xl p-5 card-shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fa fa-sitemap text-primary mr-2"></i>框架结构示意图
+            </h2>
+            <div class="flex justify-center">
+                <svg width="600" height="400" viewBox="0 0 600 400">
+                    <!-- 柱子 -->
+                    <line x1="100" y1="50" x2="100" y2="350" stroke="#165DFF" stroke-width="4"/>
+                    <line x1="250" y1="50" x2="250" y2="350" stroke="#165DFF" stroke-width="4"/>
+                    <line x1="400" y1="50" x2="400" y2="350" stroke="#165DFF" stroke-width="4"/>
+                    <line x1="550" y1="50" x2="550" y2="350" stroke="#165DFF" stroke-width="4"/>
+                    
+                    <!-- 梁 -->
+                    <line x1="100" y1="50" x2="550" y2="50" stroke="#F53F3F" stroke-width="4"/>
+                    <line x1="100" y1="100" x2="550" y2="100" stroke="#F53F3F" stroke-width="4"/>
+                    <line x1="100" y1="150" x2="550" y2="150" stroke="#F53F3F" stroke-width="4"/>
+                    <line x1="100" y1="200" x2="550" y2="200" stroke="#F53F3F" stroke-width="4"/>
+                    <line x1="100" y1="250" x2="550" y2="250" stroke="#F53F3F" stroke-width="4"/>
+                    <line x1="100" y1="300" x2="550" y2="300" stroke="#F53F3F" stroke-width="4"/>
+                    <line x1="100" y1="350" x2="550" y2="350" stroke="#F53F3F" stroke-width="4"/>
+                    
+                    <!-- 标签 -->
+                    <text x="100" y="30" text-anchor="middle" font-size="14" font-weight="bold">A柱</text>
+                    <text x="250" y="30" text-anchor="middle" font-size="14" font-weight="bold">B柱</text>
+                    <text x="400" y="30" text-anchor="middle" font-size="14" font-weight="bold">C柱</text>
+                    <text x="550" y="30" text-anchor="middle" font-size="14" font-weight="bold">D柱</text>
+                    
+                    <text x="175" y="45" text-anchor="middle" font-size="12" fill="#F53F3F">AB梁</text>
+                    <text x="325" y="45" text-anchor="middle" font-size="12" fill="#F53F3F">BC梁</text>
+                    <text x="475" y="45" text-anchor="middle" font-size="12" fill="#F53F3F">CD梁</text>
+                    
+                    <text x="70" y="50" text-anchor="middle" font-size="12">7层</text>
+                    <text x="70" y="100" text-anchor="middle" font-size="12">6层</text>
+                    <text x="70" y="150" text-anchor="middle" font-size="12">5层</text>
+                    <text x="70" y="200" text-anchor="middle" font-size="12">4层</text>
+                    <text x="70" y="250" text-anchor="middle" font-size="12">3层</text>
+                    <text x="70" y="300" text-anchor="middle" font-size="12">2层</text>
+                    <text x="70" y="350" text-anchor="middle" font-size="12">1层</text>
+                </svg>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 左侧输入区 -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- 步骤1：全局参数卡片 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="step-number">1</span>全局参数
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">混凝土强度等级</label>
+                                <select id="concrete" class="w-full px-3 py-2 border border-gray-300 rounded-lg input-focus">
+                                    <option value="C20">C20</option>
+                                    <option value="C25">C25</option>
+                                    <option value="C30" selected>C30</option>
+                                    <option value="C35">C35</option>
+                                    <option value="C40">C40</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">钢筋强度等级</label>
+                                <select id="steel" class="w-full px-3 py-2 border border-gray-300 rounded-lg input-focus">
+                                    <option value="HPB300">HPB300</option>
+                                    <option value="HRB335">HRB335</option>
+                                    <option value="HRB400" selected>HRB400</option>
+                                    <option value="HRB500">HRB500</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">保护层厚度 c (mm)</label>
+                            <input type="number" id="cover" value="20" step="5" min="15" max="50" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg input-focus">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 步骤2：楼层参数卡片 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="step-number">2</span>楼层与构件参数
+                    </h2>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button class="floor-tab tab-active px-3 py-1 rounded border text-sm" data-floor="7">7层</button>
+                        <button class="floor-tab btn-secondary px-3 py-1 rounded border text-sm" data-floor="6">6层</button>
+                        <button class="floor-tab btn-secondary px-3 py-1 rounded border text-sm" data-floor="5">5层</button>
+                        <button class="floor-tab btn-secondary px-3 py-1 rounded border text-sm" data-floor="4">4层</button>
+                        <button class="floor-tab btn-secondary px-3 py-1 rounded border text-sm" data-floor="3">3层</button>
+                        <button class="floor-tab btn-secondary px-3 py-1 rounded border text-sm" data-floor="2">2层</button>
+                        <button class="floor-tab btn-secondary px-3 py-1 rounded border text-sm" data-floor="1">1层</button>
+                    </div>
+                    
+                    <!-- 楼层参数输入区 -->
+                    <div id="floorParams" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">层高 (m)</label>
+                            <input type="number" id="floorHeight" value="3.6" step="0.1" min="2.5" max="6" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg input-focus">
+                        </div>
+                        
+                        <!-- 梁参数 -->
+                        <div class="border-t pt-4">
+                            <h3 class="text-md font-medium mb-3">梁截面参数 (mm)</h3>
+                            <div class="space-y-3">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">AB梁</label>
+                                        <div class="flex items-center">
+                                            <input type="number" id="beamABWidth" value="250" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-l input-focus text-sm">
+                                            <span class="px-1 text-gray-500">×</span>
+                                            <input type="number" id="beamABHeight" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-r input-focus text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">BC梁</label>
+                                        <div class="flex items-center">
+                                            <input type="number" id="beamBCWidth" value="250" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-l input-focus text-sm">
+                                            <span class="px-1 text-gray-500">×</span>
+                                            <input type="number" id="beamBCHeight" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-r input-focus text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">CD梁</label>
+                                        <div class="flex items-center">
+                                            <input type="number" id="beamCDWidth" value="250" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-l input-focus text-sm">
+                                            <span class="px-1 text-gray-500">×</span>
+                                            <input type="number" id="beamCDHeight" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-r input-focus text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">AB跨度(m)</label>
+                                        <input type="number" id="spanAB" value="6" step="0.1" 
+                                            class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">BC跨度(m)</label>
+                                        <input type="number" id="spanBC" value="6" step="0.1" 
+                                            class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">CD跨度(m)</label>
+                                        <input type="number" id="spanCD" value="6" step="0.1" 
+                                            class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 柱参数 -->
+                        <div class="border-t pt-4">
+                            <h3 class="text-md font-medium mb-3">柱截面参数 (mm)</h3>
+                            <div class="space-y-3">
+                                <div class="grid grid-cols-4 gap-2">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">A柱</label>
+                                        <div class="flex items-center">
+                                            <input type="number" id="colAWidth" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-l input-focus text-sm">
+                                            <span class="px-1 text-gray-500">×</span>
+                                            <input type="number" id="colAHeight" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-r input-focus text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">B柱</label>
+                                        <div class="flex items-center">
+                                            <input type="number" id="colBWidth" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-l input-focus text-sm">
+                                            <span class="px-1 text-gray-500">×</span>
+                                            <input type="number" id="colBHeight" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-r input-focus text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">C柱</label>
+                                        <div class="flex items-center">
+                                            <input type="number" id="colCWidth" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-l input-focus text-sm">
+                                            <span class="px-1 text-gray-500">×</span>
+                                            <input type="number" id="colCHeight" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-r input-focus text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">D柱</label>
+                                        <div class="flex items-center">
+                                            <input type="number" id="colDWidth" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-l input-focus text-sm">
+                                            <span class="px-1 text-gray-500">×</span>
+                                            <input type="number" id="colDHeight" value="500" step="10" 
+                                                class="w-1/2 px-2 py-1 border border-gray-300 rounded-r input-focus text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 步骤3：梁墙线荷载计算卡片 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="step-number">3</span>梁墙线荷载计算
+                    </h2>
+                    <div class="space-y-4">
+                        <!-- 墙体参数 -->
+                        <div>
+                            <h3 class="text-md font-medium mb-3">墙体参数</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">墙体厚度 (mm)</label>
+                                    <input type="number" id="wallThickness" value="200" step="10" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">墙体高度 (m)</label>
+                                    <input type="number" id="wallHeight" value="3.0" step="0.1" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">墙体材料</label>
+                                    <select id="wallMaterial" class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                        <option value="6" selected>加气混凝土砌块 (6 kN/m³)</option>
+                                        <option value="19">空心砖 (19 kN/m³)</option>
+                                        <option value="20">烧结普通砖 (20 kN/m³)</option>
+                                        <option value="25">混凝土墙 (25 kN/m³)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">双面抹灰厚度 (mm)</label>
+                                    <input type="number" id="plasterThickness" value="40" step="5" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 门窗参数 -->
+                        <div class="border-t pt-4">
+                            <h3 class="text-md font-medium mb-3">门窗参数</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">洞口宽度 (m)</label>
+                                    <input type="number" id="openingWidth" value="1.5" step="0.1" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">洞口高度 (m)</label>
+                                    <input type="number" id="openingHeight" value="2.1" step="0.1" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">门窗重量 (kN/m²)</label>
+                                    <input type="number" id="windowWeight" value="0.45" step="0.05" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">每跨洞口数量</label>
+                                    <input type="number" id="openingCount" value="1" step="1" min="0" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 楼板参数 -->
+                        <div class="border-t pt-4">
+                            <h3 class="text-md font-medium mb-3">楼板参数</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">楼板厚度 (mm)</label>
+                                    <input type="number" id="slabThickness" value="120" step="10" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">楼面面层 (kN/m²)</label>
+                                    <input type="number" id="floorFinish" value="0.6" step="0.1" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">板底抹灰 (kN/m²)</label>
+                                    <input type="number" id="ceilingFinish" value="0.3" step="0.1" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">梁从属宽度 (m)</label>
+                                    <input type="number" id="tributaryWidth" value="3.0" step="0.1" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 活荷载 -->
+                        <div class="border-t pt-4">
+                            <h3 class="text-md font-medium mb-3">活荷载</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">楼面活荷载 (kN/m²)</label>
+                                    <input type="number" id="liveLoadArea" value="2.0" step="0.5" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">活载折减系数</label>
+                                    <input type="number" id="liveLoadReduction" value="1.0" step="0.1" min="0.5" max="1.0" 
+                                        class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 计算结果 -->
+                        <div class="border-t pt-4">
+                            <h3 class="text-md font-medium mb-3">计算结果</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-blue-50 rounded-lg p-3 text-center">
+                                    <p class="text-xs text-gray-500 mb-1">计算恒载</p>
+                                    <p id="calculatedDeadLoad" class="text-lg font-bold text-primary">--</p>
+                                    <p class="text-xs text-gray-400">kN/m</p>
+                                </div>
+                                <div class="bg-green-50 rounded-lg p-3 text-center">
+                                    <p class="text-xs text-gray-500 mb-1">计算活载</p>
+                                    <p id="calculatedLiveLoad" class="text-lg font-bold text-success">--</p>
+                                    <p class="text-xs text-gray-400">kN/m</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="calculateLoadBtn" class="btn-secondary text-sm">
+                                <i class="fa fa-calculator mr-1"></i>计算荷载
+                            </button>
+                            <button id="applyLoadBtn" class="btn-primary text-sm">
+                                <i class="fa fa-check mr-1"></i>应用到当前楼层
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 步骤4：竖向荷载下内力计算卡片 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="step-number">4</span>竖向荷载下内力计算
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="p-3 rounded-lg status-pending" id="internalForceStatus">
+                            <p class="text-sm"><i class="fa fa-info-circle mr-1"></i> 状态：未计算</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-blue-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">梁最大正弯矩</p>
+                                <p id="internalMaxBeamPosM" class="text-lg font-bold text-primary">--</p>
+                                <p class="text-xs text-gray-400">kN·m</p>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">梁最大负弯矩</p>
+                                <p id="internalMaxBeamNegM" class="text-lg font-bold text-danger">--</p>
+                                <p class="text-xs text-gray-400">kN·m</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">柱最大轴力</p>
+                                <p id="internalMaxColN" class="text-lg font-bold text-success">--</p>
+                                <p class="text-xs text-gray-400">kN</p>
+                            </div>
+                            <div class="bg-orange-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">柱最大弯矩</p>
+                                <p id="internalMaxColM" class="text-lg font-bold text-warning">--</p>
+                                <p class="text-xs text-gray-400">kN·m</p>
+                            </div>
+                        </div>
+                        
+                        <button id="calculateInternalForceBtn" class="btn-primary w-full">
+                            <i class="fa fa-bolt mr-2"></i>计算竖向荷载内力
+                        </button>
+                        
+                        <p class="text-xs text-gray-500 text-center">
+                            采用弯矩二次分配法计算标准值内力
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 步骤5：内力组合卡片 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="step-number">5</span>荷载效应基本组合
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="p-3 rounded-lg status-pending" id="combinationStatus">
+                            <p class="text-sm"><i class="fa fa-info-circle mr-1"></i> 状态：未组合</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">恒载分项系数 γG</label>
+                                <input type="number" id="gammaG" value="1.2" step="0.1" min="1.0" max="1.4" 
+                                    class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">活载分项系数 γQ</label>
+                                <input type="number" id="gammaQ" value="1.4" step="0.1" min="1.0" max="1.4" 
+                                    class="w-full px-2 py-1 border border-gray-300 rounded input-focus text-sm">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-blue-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">组合后梁最大正弯矩</p>
+                                <p id="combMaxBeamPosM" class="text-lg font-bold text-primary">--</p>
+                                <p class="text-xs text-gray-400">kN·m</p>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">组合后梁最大负弯矩</p>
+                                <p id="combMaxBeamNegM" class="text-lg font-bold text-danger">--</p>
+                                <p class="text-xs text-gray-400">kN·m</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">组合后柱最大轴力</p>
+                                <p id="combMaxColN" class="text-lg font-bold text-success">--</p>
+                                <p class="text-xs text-gray-400">kN</p>
+                            </div>
+                            <div class="bg-orange-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-gray-500 mb-1">组合后柱最大弯矩</p>
+                                <p id="combMaxColM" class="text-lg font-bold text-warning">--</p>
+                                <p class="text-xs text-gray-400">kN·m</p>
+                            </div>
+                        </div>
+                        
+                        <button id="combineForcesBtn" class="btn-primary w-full">
+                            <i class="fa fa-link mr-2"></i>进行内力组合
+                        </button>
+                        
+                        <p class="text-xs text-gray-500 text-center">
+                            组合公式：S = γG×SG + γQ×SQ
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 步骤6：配筋计算按钮 -->
+                <button id="calculateReinforcementBtn" class="btn-primary w-full py-3 text-lg font-medium">
+                    <i class="fa fa-pencil-square-o mr-2"></i>步骤6：生成配筋结果
+                </button>
+            </div>
+
+            <!-- 右侧结果区 -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- 计算结果概览 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fa fa-bar-chart text-primary mr-2"></i>最终计算结果概览
+                    </h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-blue-50 rounded-lg p-4 text-center">
+                            <p class="text-sm text-gray-500 mb-1">梁最大正弯矩</p>
+                            <p id="maxBeamPosMoment" class="text-xl font-bold text-primary">--</p>
+                            <p class="text-xs text-gray-400">kN·m</p>
+                        </div>
+                        <div class="bg-red-50 rounded-lg p-4 text-center">
+                            <p class="text-sm text-gray-500 mb-1">梁最大负弯矩</p>
+                            <p id="maxBeamNegMoment" class="text-xl font-bold text-danger">--</p>
+                            <p class="text-xs text-gray-400">kN·m</p>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-4 text-center">
+                            <p class="text-sm text-gray-500 mb-1">柱最大轴力</p>
+                            <p id="maxColAxial" class="text-xl font-bold text-success">--</p>
+                            <p class="text-xs text-gray-400">kN</p>
+                        </div>
+                        <div class="bg-orange-50 rounded-lg p-4 text-center">
+                            <p class="text-sm text-gray-500 mb-1">柱最大弯矩</p>
+                            <p id="maxColMoment" class="text-xl font-bold text-warning">--</p>
+                            <p class="text-xs text-gray-400">kN·m</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 结果标签页 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <div class="flex border-b mb-4">
+                        <button class="result-tab tab-active px-4 py-2 text-sm font-medium" data-tab="beams">梁配筋结果</button>
+                        <button class="result-tab btn-secondary px-4 py-2 text-sm font-medium" data-tab="columns">柱配筋结果</button>
+                        <button class="result-tab btn-secondary px-4 py-2 text-sm font-medium" data-tab="moments">弯矩图</button>
+                        <button class="result-tab btn-secondary px-4 py-2 text-sm font-medium" data-tab="shears">剪力图</button>
+                    </div>
+                    
+                    <!-- 梁配筋结果 -->
+                    <div id="beamsTab" class="result-content">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">楼层</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">梁号</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">左端弯矩</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">跨中弯矩</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">右端弯矩</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">左端配筋</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">跨中配筋</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">右端配筋</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="beamsTable" class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">请先完成内力组合</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 柱配筋结果 -->
+                    <div id="columnsTab" class="result-content hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">楼层</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">柱号</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">截面尺寸</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">轴力</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">上端弯矩</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">下端弯矩</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">建议配筋</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">配筋率</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="columnsTable" class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">请先完成内力组合</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 弯矩图 -->
+                    <div id="momentsTab" class="result-content hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <h3 class="text-md font-medium mb-2 text-center">AB梁弯矩图</h3>
+                                <div class="h-64">
+                                    <canvas id="momentABChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-md font-medium mb-2 text-center">BC梁弯矩图</h3>
+                                <div class="h-64">
+                                    <canvas id="momentBCChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-md font-medium mb-2 text-center">CD梁弯矩图</h3>
+                                <div class="h-64">
+                                    <canvas id="momentCDChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 剪力图 -->
+                    <div id="shearsTab" class="result-content hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <h3 class="text-md font-medium mb-2 text-center">AB梁剪力图</h3>
+                                <div class="h-64">
+                                    <canvas id="shearABChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-md font-medium mb-2 text-center">BC梁剪力图</h3>
+                                <div class="h-64">
+                                    <canvas id="shearBCChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-md font-medium mb-2 text-center">CD梁剪力图</h3>
+                                <div class="h-64">
+                                    <canvas id="shearCDChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 计算说明 -->
+                <div class="bg-white rounded-xl p-5 card-shadow">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <i class="fa fa-info-circle text-primary mr-2"></i>计算说明
+                    </h2>
+                    <div class="text-sm text-gray-600 space-y-2">
+                        <p>1. 本工具基于《混凝土结构设计规范》GB 50010-2010(2015年版)编制</p>
+                        <p>2. 适用于七层三跨规则框架结构的竖向荷载下内力计算</p>
+                        <p>3. <strong>标准计算流程</strong>：全局参数 → 楼层构件参数 → 梁墙线荷载 → 竖向内力计算 → 内力组合 → 配筋计算</p>
+                        <p>4. 内力计算采用<strong>弯矩二次分配法</strong>计算标准值内力</p>
+                        <p>5. 新增<strong>荷载效应基本组合</strong>：S = γG×SG + γQ×SQ</p>
+                        <p>6. 梁配筋采用单筋矩形截面受弯构件正截面受弯承载力公式</p>
+                        <p>7. 柱配筋采用对称配筋偏心受压构件正截面承载力公式</p>
+                        <p>8. 已修正加气混凝土砌块容重为6 kN/m³</p>
+                        <p>9. 建议配筋仅为参考，实际工程中应根据具体情况调整</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-gray-200 py-4 mt-8">
+        <div class="container mx-auto px-4 text-center text-sm text-gray-500">
+            <p>七层三跨框架内力与配筋计算工具 © 2026 | 仅供学习参考，实际工程请以专业计算为准</p>
+        </div>
+    </footer>
+
+    <script>
+        // 材料强度参数
+        const concreteStrength = {
+            'C20': {fc: 9.6, ft: 1.10, Ec: 2.55e4},
+            'C25': {fc: 11.9, ft: 1.27, Ec: 2.80e4},
+            'C30': {fc: 14.3, ft: 1.43, Ec: 3.00e4},
+            'C35': {fc: 16.7, ft: 1.57, Ec: 3.15e4},
+            'C40': {fc: 19.1, ft: 1.71, Ec: 3.25e4}
+        };
+
+        const steelStrength = {
+            'HPB300': {fy: 270, fyv: 270, Es: 2.1e5},
+            'HRB335': {fy: 300, fyv: 300, Es: 2.0e5},
+            'HRB400': {fy: 360, fyv: 360, Es: 2.0e5},
+            'HRB500': {fy: 435, fyv: 435, Es: 2.0e5}
+        };
+
+        // 钢筋直径和面积
+        const barDiameters = [6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32];
+        const barAreas = barDiameters.map(d => Math.PI * d * d / 4);
+
+        // 全局变量
+        let currentFloor = 7;
+        let floorData = {};
+        let charts = {};
+        let standardInternalForces = null; // 标准值内力结果
+        let combinedInternalForces = null; // 组合后内力结果
+
+        // 初始化楼层数据
+        function initFloorData() {
+            for (let i = 1; i <= 7; i++) {
+                floorData[i] = {
+                    height: 3.6,
+                    beamAB: {width: 250, height: 500, span: 6, deadLoad: 10, liveLoad: 15},
+                    beamBC: {width: 250, height: 500, span: 6, deadLoad: 10, liveLoad: 15},
+                    beamCD: {width: 250, height: 500, span: 6, deadLoad: 10, liveLoad: 15},
+                    colA: {width: 500, height: 500},
+                    colB: {width: 500, height: 500},
+                    colC: {width: 500, height: 500},
+                    colD: {width: 500, height: 500}
+                };
+            }
+        }
+
+        // 保存当前楼层数据（修复：移除了对不存在的荷载输入框的引用）
+        function saveCurrentFloorData() {
+            floorData[currentFloor] = {
+                height: parseFloat(document.getElementById('floorHeight').value),
+                beamAB: {
+                    width: parseFloat(document.getElementById('beamABWidth').value),
+                    height: parseFloat(document.getElementById('beamABHeight').value),
+                    span: parseFloat(document.getElementById('spanAB').value),
+                    deadLoad: floorData[currentFloor].beamAB.deadLoad,
+                    liveLoad: floorData[currentFloor].beamAB.liveLoad
+                },
+                beamBC: {
+                    width: parseFloat(document.getElementById('beamBCWidth').value),
+                    height: parseFloat(document.getElementById('beamBCHeight').value),
+                    span: parseFloat(document.getElementById('spanBC').value),
+                    deadLoad: floorData[currentFloor].beamBC.deadLoad,
+                    liveLoad: floorData[currentFloor].beamBC.liveLoad
+                },
+                beamCD: {
+                    width: parseFloat(document.getElementById('beamCDWidth').value),
+                    height: parseFloat(document.getElementById('beamCDHeight').value),
+                    span: parseFloat(document.getElementById('spanCD').value),
+                    deadLoad: floorData[currentFloor].beamCD.deadLoad,
+                    liveLoad: floorData[currentFloor].beamCD.liveLoad
+                },
+                colA: {
+                    width: parseFloat(document.getElementById('colAWidth').value),
+                    height: parseFloat(document.getElementById('colAHeight').value)
+                },
+                colB: {
+                    width: parseFloat(document.getElementById('colBWidth').value),
+                    height: parseFloat(document.getElementById('colBHeight').value)
+                },
+                colC: {
+                    width: parseFloat(document.getElementById('colCWidth').value),
+                    height: parseFloat(document.getElementById('colCHeight').value)
+                },
+                colD: {
+                    width: parseFloat(document.getElementById('colDWidth').value),
+                    height: parseFloat(document.getElementById('colDHeight').value)
+                }
+            };
+        }
+
+        // 加载楼层数据（修复：移除了对不存在的荷载输入框的引用）
+        function loadFloorData(floor) {
+            const data = floorData[floor];
+            document.getElementById('floorHeight').value = data.height;
+            
+            // 梁参数
+            document.getElementById('beamABWidth').value = data.beamAB.width;
+            document.getElementById('beamABHeight').value = data.beamAB.height;
+            document.getElementById('spanAB').value = data.beamAB.span;
+            
+            document.getElementById('beamBCWidth').value = data.beamBC.width;
+            document.getElementById('beamBCHeight').value = data.beamBC.height;
+            document.getElementById('spanBC').value = data.beamBC.span;
+            
+            document.getElementById('beamCDWidth').value = data.beamCD.width;
+            document.getElementById('beamCDHeight').value = data.beamCD.height;
+            document.getElementById('spanCD').value = data.beamCD.span;
+            
+            // 柱参数
+            document.getElementById('colAWidth').value = data.colA.width;
+            document.getElementById('colAHeight').value = data.colA.height;
+            document.getElementById('colBWidth').value = data.colB.width;
+            document.getElementById('colBHeight').value = data.colB.height;
+            document.getElementById('colCWidth').value = data.colC.width;
+            document.getElementById('colCHeight').value = data.colC.height;
+            document.getElementById('colDWidth').value = data.colD.width;
+            document.getElementById('colDHeight').value = data.colD.height;
+        }
+
+        // 梁墙线荷载计算
+        function calculateLineLoad() {
+            // 获取输入参数
+            const wallThickness = parseFloat(document.getElementById('wallThickness').value) / 1000; // 转换为m
+            const wallHeight = parseFloat(document.getElementById('wallHeight').value);
+            const wallDensity = parseFloat(document.getElementById('wallMaterial').value);
+            const plasterThickness = parseFloat(document.getElementById('plasterThickness').value) / 1000; // 转换为m
+            const plasterDensity = 20; // 抹灰密度 kN/m³
+            
+            const openingWidth = parseFloat(document.getElementById('openingWidth').value);
+            const openingHeight = parseFloat(document.getElementById('openingHeight').value);
+            const windowWeight = parseFloat(document.getElementById('windowWeight').value);
+            const openingCount = parseInt(document.getElementById('openingCount').value);
+            
+            const slabThickness = parseFloat(document.getElementById('slabThickness').value) / 1000; // 转换为m
+            const floorFinish = parseFloat(document.getElementById('floorFinish').value);
+            const ceilingFinish = parseFloat(document.getElementById('ceilingFinish').value);
+            const tributaryWidth = parseFloat(document.getElementById('tributaryWidth').value);
+            
+            const liveLoadArea = parseFloat(document.getElementById('liveLoadArea').value);
+            const liveLoadReduction = parseFloat(document.getElementById('liveLoadReduction').value);
+            
+            // 计算墙体自重(含抹灰)
+            const wallWeight = wallDensity * wallThickness * wallHeight;
+            const plasterWeight = plasterDensity * plasterThickness * wallHeight * 2; // 双面抹灰
+            const totalWallWeight = wallWeight + plasterWeight;
+            
+            // 计算门窗洞口扣除
+            const openingArea = openingWidth * openingHeight * openingCount;
+            const wallAreaPerSpan = wallHeight * 1; // 每延米墙体面积
+            const openingRatio = openingArea / (wallAreaPerSpan * parseFloat(document.getElementById('spanAB').value));
+            const windowWeightPerMeter = windowWeight * openingArea / parseFloat(document.getElementById('spanAB').value);
+            
+            // 计算楼板传来的恒载
+            const slabWeight = 25 * slabThickness; // 混凝土自重
+            const totalSlabWeight = slabWeight + floorFinish + ceilingFinish;
+            const slabLoadPerMeter = totalSlabWeight * tributaryWidth;
+            
+            // 计算梁自重
+            const beamWidth = parseFloat(document.getElementById('beamABWidth').value) / 1000;
+            const beamHeight = parseFloat(document.getElementById('beamABHeight').value) / 1000;
+            const beamWeight = 25 * beamWidth * beamHeight;
+            
+            // 总恒载
+            const deadLoad = (totalWallWeight * (1 - openingRatio) + windowWeightPerMeter) + slabLoadPerMeter + beamWeight;
+            
+            // 总活载
+            const liveLoad = liveLoadArea * tributaryWidth * liveLoadReduction;
+            
+            // 显示结果
+            document.getElementById('calculatedDeadLoad').textContent = deadLoad.toFixed(2);
+            document.getElementById('calculatedLiveLoad').textContent = liveLoad.toFixed(2);
+            
+            return {
+                deadLoad: deadLoad.toFixed(2),
+                liveLoad: liveLoad.toFixed(2)
+            };
+        }
+
+        // 应用荷载到当前楼层（修复：直接更新floorData，不操作不存在的输入框）
+        function applyLoadToCurrentFloor() {
+            const loads = calculateLineLoad();
+            
+            // 保存当前楼层数据
+            saveCurrentFloorData();
+            
+            // 应用到当前楼层的所有梁
+            floorData[currentFloor].beamAB.deadLoad = parseFloat(loads.deadLoad);
+            floorData[currentFloor].beamAB.liveLoad = parseFloat(loads.liveLoad);
+            floorData[currentFloor].beamBC.deadLoad = parseFloat(loads.deadLoad);
+            floorData[currentFloor].beamBC.liveLoad = parseFloat(loads.liveLoad);
+            floorData[currentFloor].beamCD.deadLoad = parseFloat(loads.deadLoad);
+            floorData[currentFloor].beamCD.liveLoad = parseFloat(loads.liveLoad);
+            
+            alert(`荷载已成功应用到${currentFloor}层的所有梁！\n恒载：${loads.deadLoad} kN/m\n活载：${loads.liveLoad} kN/m`);
+        }
+
+        // 初始化图表
+        function initCharts() {
+            const chartConfigs = [
+                {id: 'momentABChart', label: '弯矩', color: '#165DFF'},
+                {id: 'momentBCChart', label: '弯矩', color: '#165DFF'},
+                {id: 'momentCDChart', label: '弯矩', color: '#165DFF'},
+                {id: 'shearABChart', label: '剪力', color: '#00B42A'},
+                {id: 'shearBCChart', label: '剪力', color: '#00B42A'},
+                {id: 'shearCDChart', label: '剪力', color: '#00B42A'}
+            ];
+
+            chartConfigs.forEach(config => {
+                const ctx = document.getElementById(config.id).getContext('2d');
+                charts[config.id] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: config.label,
+                            data: [],
+                            borderColor: config.color,
+                            backgroundColor: config.color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                            fill: true,
+                            tension: 0.1,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {title: {display: true, text: '距离左端 (m)'}},
+                            y: {title: {display: true, text: config.label.includes('弯矩') ? '弯矩 (kN·m)' : '剪力 (kN)'}}
+                        },
+                        plugins: {legend: {display: false}}
+                    }
+                });
+            });
+        }
+
+        // 计算线刚度
+        function calculateStiffness(E, I, L) {
+            return E * I / L;
+        }
+
+        // 计算惯性矩
+        function calculateInertia(b, h) {
+            // 转换为米单位计算
+            return (b/1000) * Math.pow(h/1000, 3) / 12;
+        }
+
+        // 竖向荷载下内力计算（弯矩二次分配法）- 计算标准值
+        function calculateVerticalInternalForces() {
+            try {
+                // 保存所有楼层数据
+                for (let i = 1; i <= 7; i++) {
+                    currentFloor = i;
+                    loadFloorData(i);
+                    saveCurrentFloorData();
+                }
+                currentFloor = 7;
+                loadFloorData(7);
+                
+                const concrete = document.getElementById('concrete').value;
+                const Ec = concreteStrength[concrete].Ec * 1e6; // 转换为kN/m²
+
+                const results = {
+                    beams: [],
+                    columns: [],
+                    maxBeamPosMoment: 0,
+                    maxBeamNegMoment: 0,
+                    maxColAxial: 0,
+                    maxColMoment: 0
+                };
+
+                // 逐层计算（从顶层到底层）
+                for (let floor = 7; floor >= 1; floor--) {
+                    const data = floorData[floor];
+                    const floorHeight = data.height;
+                    
+                    // 计算梁的线刚度
+                    const I_AB = calculateInertia(data.beamAB.width, data.beamAB.height);
+                    const I_BC = calculateInertia(data.beamBC.width, data.beamBC.height);
+                    const I_CD = calculateInertia(data.beamCD.width, data.beamCD.height);
+                    
+                    const k_AB = calculateStiffness(Ec, I_AB, data.beamAB.span);
+                    const k_BC = calculateStiffness(Ec, I_BC, data.beamBC.span);
+                    const k_CD = calculateStiffness(Ec, I_CD, data.beamCD.span);
+                    
+                    // 计算柱的线刚度（考虑上下层）
+                    let k_A_upper = 0, k_B_upper = 0, k_C_upper = 0, k_D_upper = 0;
+                    if (floor < 7) {
+                        const upperData = floorData[floor+1];
+                        const I_colA_upper = calculateInertia(upperData.colA.width, upperData.colA.height);
+                        const I_colB_upper = calculateInertia(upperData.colB.width, upperData.colB.height);
+                        const I_colC_upper = calculateInertia(upperData.colC.width, upperData.colC.height);
+                        const I_colD_upper = calculateInertia(upperData.colD.width, upperData.colD.height);
+                        
+                        k_A_upper = calculateStiffness(Ec, I_colA_upper, upperData.height);
+                        k_B_upper = calculateStiffness(Ec, I_colB_upper, upperData.height);
+                        k_C_upper = calculateStiffness(Ec, I_colC_upper, upperData.height);
+                        k_D_upper = calculateStiffness(Ec, I_colD_upper, upperData.height);
+                    }
+                    
+                    const I_colA = calculateInertia(data.colA.width, data.colA.height);
+                    const I_colB = calculateInertia(data.colB.width, data.colB.height);
+                    const I_colC = calculateInertia(data.colC.width, data.colC.height);
+                    const I_colD = calculateInertia(data.colD.width, data.colD.height);
+                    
+                    const k_A_lower = calculateStiffness(Ec, I_colA, floorHeight);
+                    const k_B_lower = calculateStiffness(Ec, I_colB, floorHeight);
+                    const k_C_lower = calculateStiffness(Ec, I_colC, floorHeight);
+                    const k_D_lower = calculateStiffness(Ec, I_colD, floorHeight);
+                    
+                    const k_A = k_A_upper + k_A_lower;
+                    const k_B = k_B_upper + k_B_lower;
+                    const k_C = k_C_upper + k_C_lower;
+                    const k_D = k_D_upper + k_D_lower;
+                    
+                    // 计算分配系数
+                    // A节点：只有AB梁和A柱
+                    const mu_A_AB = k_AB / (k_AB + k_A);
+                    const mu_A_col = k_A / (k_AB + k_A);
+                    
+                    // B节点：AB梁、BC梁和B柱
+                    const mu_B_BA = k_AB / (k_AB + k_BC + k_B);
+                    const mu_B_BC = k_BC / (k_AB + k_BC + k_B);
+                    const mu_B_col = k_B / (k_AB + k_BC + k_B);
+                    
+                    // C节点：BC梁、CD梁和C柱
+                    const mu_C_CB = k_BC / (k_BC + k_CD + k_C);
+                    const mu_C_CD = k_CD / (k_BC + k_CD + k_C);
+                    const mu_C_col = k_C / (k_BC + k_CD + k_C);
+                    
+                    // D节点：只有CD梁和D柱
+                    const mu_D_DC = k_CD / (k_CD + k_D);
+                    const mu_D_col = k_D / (k_CD + k_D);
+                    
+                    // 计算恒载下的固端弯矩
+                    const p_AB_dead = data.beamAB.deadLoad;
+                    const p_BC_dead = data.beamBC.deadLoad;
+                    const p_CD_dead = data.beamCD.deadLoad;
+                    
+                    const M_AB_fixed_dead = -p_AB_dead * data.beamAB.span * data.beamAB.span / 12;
+                    const M_BA_fixed_dead = p_AB_dead * data.beamAB.span * data.beamAB.span / 12;
+                    const M_BC_fixed_dead = -p_BC_dead * data.beamBC.span * data.beamBC.span / 12;
+                    const M_CB_fixed_dead = p_BC_dead * data.beamBC.span * data.beamBC.span / 12;
+                    const M_CD_fixed_dead = -p_CD_dead * data.beamCD.span * data.beamCD.span / 12;
+                    const M_DC_fixed_dead = p_CD_dead * data.beamCD.span * data.beamCD.span / 12;
+                    
+                    // 计算活载下的固端弯矩
+                    const p_AB_live = data.beamAB.liveLoad;
+                    const p_BC_live = data.beamBC.liveLoad;
+                    const p_CD_live = data.beamCD.liveLoad;
+                    
+                    const M_AB_fixed_live = -p_AB_live * data.beamAB.span * data.beamAB.span / 12;
+                    const M_BA_fixed_live = p_AB_live * data.beamAB.span * data.beamAB.span / 12;
+                    const M_BC_fixed_live = -p_BC_live * data.beamBC.span * data.beamBC.span / 12;
+                    const M_CB_fixed_live = p_BC_live * data.beamBC.span * data.beamBC.span / 12;
+                    const M_CD_fixed_live = -p_CD_live * data.beamCD.span * data.beamCD.span / 12;
+                    const M_DC_fixed_live = p_CD_live * data.beamCD.span * data.beamCD.span / 12;
+                    
+                    // 弯矩二次分配法计算（恒载）
+                    const deadMoments = performMomentDistribution(
+                        M_AB_fixed_dead, M_BA_fixed_dead, M_BC_fixed_dead, 
+                        M_CB_fixed_dead, M_CD_fixed_dead, M_DC_fixed_dead,
+                        mu_A_AB, mu_A_col, mu_B_BA, mu_B_BC, mu_B_col,
+                        mu_C_CB, mu_C_CD, mu_C_col, mu_D_DC, mu_D_col
+                    );
+                    
+                    // 弯矩二次分配法计算（活载）
+                    const liveMoments = performMomentDistribution(
+                        M_AB_fixed_live, M_BA_fixed_live, M_BC_fixed_live, 
+                        M_CB_fixed_live, M_CD_fixed_live, M_DC_fixed_live,
+                        mu_A_AB, mu_A_col, mu_B_BA, mu_B_BC, mu_B_col,
+                        mu_C_CB, mu_C_CD, mu_C_col, mu_D_DC, mu_D_col
+                    );
+                    
+                    // 计算跨中弯矩（恒载）
+                    const M_AB_mid_dead = p_AB_dead * data.beamAB.span * data.beamAB.span / 8 - (Math.abs(deadMoments.M_AB) + Math.abs(deadMoments.M_BA)) / 2;
+                    const M_BC_mid_dead = p_BC_dead * data.beamBC.span * data.beamBC.span / 8 - (Math.abs(deadMoments.M_BC) + Math.abs(deadMoments.M_CB)) / 2;
+                    const M_CD_mid_dead = p_CD_dead * data.beamCD.span * data.beamCD.span / 8 - (Math.abs(deadMoments.M_CD) + Math.abs(deadMoments.M_DC)) / 2;
+                    
+                    // 计算跨中弯矩（活载）
+                    const M_AB_mid_live = p_AB_live * data.beamAB.span * data.beamAB.span / 8 - (Math.abs(liveMoments.M_AB) + Math.abs(liveMoments.M_BA)) / 2;
+                    const M_BC_mid_live = p_BC_live * data.beamBC.span * data.beamBC.span / 8 - (Math.abs(liveMoments.M_BC) + Math.abs(liveMoments.M_CB)) / 2;
+                    const M_CD_mid_live = p_CD_live * data.beamCD.span * data.beamCD.span / 8 - (Math.abs(liveMoments.M_CD) + Math.abs(liveMoments.M_DC)) / 2;
+                    
+                    // 计算梁的剪力（恒载）
+                    const V_AB_left_dead = p_AB_dead * data.beamAB.span / 2 + (deadMoments.M_AB - deadMoments.M_BA) / data.beamAB.span;
+                    const V_AB_right_dead = p_AB_dead * data.beamAB.span / 2 - (deadMoments.M_AB - deadMoments.M_BA) / data.beamAB.span;
+                    const V_BC_left_dead = p_BC_dead * data.beamBC.span / 2 + (deadMoments.M_BC - deadMoments.M_CB) / data.beamBC.span;
+                    const V_BC_right_dead = p_BC_dead * data.beamBC.span / 2 - (deadMoments.M_BC - deadMoments.M_CB) / data.beamBC.span;
+                    const V_CD_left_dead = p_CD_dead * data.beamCD.span / 2 + (deadMoments.M_CD - deadMoments.M_DC) / data.beamCD.span;
+                    const V_CD_right_dead = p_CD_dead * data.beamCD.span / 2 - (deadMoments.M_CD - deadMoments.M_DC) / data.beamCD.span;
+                    
+                    // 计算梁的剪力（活载）
+                    const V_AB_left_live = p_AB_live * data.beamAB.span / 2 + (liveMoments.M_AB - liveMoments.M_BA) / data.beamAB.span;
+                    const V_AB_right_live = p_AB_live * data.beamAB.span / 2 - (liveMoments.M_AB - liveMoments.M_BA) / data.beamAB.span;
+                    const V_BC_left_live = p_BC_live * data.beamBC.span / 2 + (liveMoments.M_BC - liveMoments.M_CB) / data.beamBC.span;
+                    const V_BC_right_live = p_BC_live * data.beamBC.span / 2 - (liveMoments.M_BC - liveMoments.M_CB) / data.beamBC.span;
+                    const V_CD_left_live = p_CD_live * data.beamCD.span / 2 + (liveMoments.M_CD - liveMoments.M_DC) / data.beamCD.span;
+                    const V_CD_right_live = p_CD_live * data.beamCD.span / 2 - (liveMoments.M_CD - liveMoments.M_DC) / data.beamCD.span;
+                    
+                    // 计算柱的轴力（恒载）
+                    let N_A_dead = 0, N_B_dead = 0, N_C_dead = 0, N_D_dead = 0;
+                    for (let f = floor; f <= 7; f++) {
+                        const fd = floorData[f];
+                        N_A_dead += fd.beamAB.deadLoad * fd.beamAB.span / 2;
+                        N_B_dead += fd.beamAB.deadLoad * fd.beamAB.span / 2 + fd.beamBC.deadLoad * fd.beamBC.span / 2;
+                        N_C_dead += fd.beamBC.deadLoad * fd.beamBC.span / 2 + fd.beamCD.deadLoad * fd.beamCD.span / 2;
+                        N_D_dead += fd.beamCD.deadLoad * fd.beamCD.span / 2;
+                        
+                        // 加上柱自重
+                        N_A_dead += 25 * (fd.colA.width/1000) * (fd.colA.height/1000) * fd.height;
+                        N_B_dead += 25 * (fd.colB.width/1000) * (fd.colB.height/1000) * fd.height;
+                        N_C_dead += 25 * (fd.colC.width/1000) * (fd.colC.height/1000) * fd.height;
+                        N_D_dead += 25 * (fd.colD.width/1000) * (fd.colD.height/1000) * fd.height;
+                    }
+                    
+                    // 计算柱的轴力（活载）
+                    let N_A_live = 0, N_B_live = 0, N_C_live = 0, N_D_live = 0;
+                    for (let f = floor; f <= 7; f++) {
+                        const fd = floorData[f];
+                        N_A_live += fd.beamAB.liveLoad * fd.beamAB.span / 2;
+                        N_B_live += fd.beamAB.liveLoad * fd.beamAB.span / 2 + fd.beamBC.liveLoad * fd.beamBC.span / 2;
+                        N_C_live += fd.beamBC.liveLoad * fd.beamBC.span / 2 + fd.beamCD.liveLoad * fd.beamCD.span / 2;
+                        N_D_live += fd.beamCD.liveLoad * fd.beamCD.span / 2;
+                    }
+                    
+                    // 柱的弯矩和剪力（恒载）
+                    const M_A_upper_dead = deadMoments.M_A_col;
+                    const M_B_upper_dead = deadMoments.M_B_col;
+                    const M_C_upper_dead = deadMoments.M_C_col;
+                    const M_D_upper_dead = deadMoments.M_D_col;
+                    
+                    const M_A_lower_dead = M_A_upper_dead * 0.5;
+                    const M_B_lower_dead = M_B_upper_dead * 0.5;
+                    const M_C_lower_dead = M_C_upper_dead * 0.5;
+                    const M_D_lower_dead = M_D_upper_dead * 0.5;
+                    
+                    const V_A_dead = (Math.abs(M_A_upper_dead) + Math.abs(M_A_lower_dead)) / floorHeight;
+                    const V_B_dead = (Math.abs(M_B_upper_dead) + Math.abs(M_B_lower_dead)) / floorHeight;
+                    const V_C_dead = (Math.abs(M_C_upper_dead) + Math.abs(M_C_lower_dead)) / floorHeight;
+                    const V_D_dead = (Math.abs(M_D_upper_dead) + Math.abs(M_D_lower_dead)) / floorHeight;
+                    
+                    // 柱的弯矩和剪力（活载）
+                    const M_A_upper_live = liveMoments.M_A_col;
+                    const M_B_upper_live = liveMoments.M_B_col;
+                    const M_C_upper_live = liveMoments.M_C_col;
+                    const M_D_upper_live = liveMoments.M_D_col;
+                    
+                    const M_A_lower_live = M_A_upper_live * 0.5;
+                    const M_B_lower_live = M_B_upper_live * 0.5;
+                    const M_C_lower_live = M_C_upper_live * 0.5;
+                    const M_D_lower_live = M_D_upper_live * 0.5;
+                    
+                    const V_A_live = (Math.abs(M_A_upper_live) + Math.abs(M_A_lower_live)) / floorHeight;
+                    const V_B_live = (Math.abs(M_B_upper_live) + Math.abs(M_B_lower_live)) / floorHeight;
+                    const V_C_live = (Math.abs(M_C_upper_live) + Math.abs(M_C_lower_live)) / floorHeight;
+                    const V_D_live = (Math.abs(M_D_upper_live) + Math.abs(M_D_lower_live)) / floorHeight;
+                    
+                    // 保存梁结果（分别保存恒载和活载）
+                    results.beams.push({
+                        floor: floor,
+                        beam: 'AB',
+                        dead: {
+                            leftMoment: deadMoments.M_AB,
+                            midMoment: M_AB_mid_dead,
+                            rightMoment: deadMoments.M_BA,
+                            leftShear: V_AB_left_dead,
+                            rightShear: V_AB_right_dead
+                        },
+                        live: {
+                            leftMoment: liveMoments.M_AB,
+                            midMoment: M_AB_mid_live,
+                            rightMoment: liveMoments.M_BA,
+                            leftShear: V_AB_left_live,
+                            rightShear: V_AB_right_live
+                        },
+                        width: data.beamAB.width,
+                        height: data.beamAB.height,
+                        span: data.beamAB.span
+                    });
+                    
+                    results.beams.push({
+                        floor: floor,
+                        beam: 'BC',
+                        dead: {
+                            leftMoment: deadMoments.M_BC,
+                            midMoment: M_BC_mid_dead,
+                            rightMoment: deadMoments.M_CB,
+                            leftShear: V_BC_left_dead,
+                            rightShear: V_BC_right_dead
+                        },
+                        live: {
+                            leftMoment: liveMoments.M_BC,
+                            midMoment: M_BC_mid_live,
+                            rightMoment: liveMoments.M_CB,
+                            leftShear: V_BC_left_live,
+                            rightShear: V_BC_right_live
+                        },
+                        width: data.beamBC.width,
+                        height: data.beamBC.height,
+                        span: data.beamBC.span
+                    });
+                    
+                    results.beams.push({
+                        floor: floor,
+                        beam: 'CD',
+                        dead: {
+                            leftMoment: deadMoments.M_CD,
+                            midMoment: M_CD_mid_dead,
+                            rightMoment: deadMoments.M_DC,
+                            leftShear: V_CD_left_dead,
+                            rightShear: V_CD_right_dead
+                        },
+                        live: {
+                            leftMoment: liveMoments.M_CD,
+                            midMoment: M_CD_mid_live,
+                            rightMoment: liveMoments.M_DC,
+                            leftShear: V_CD_left_live,
+                            rightShear: V_CD_right_live
+                        },
+                        width: data.beamCD.width,
+                        height: data.beamCD.height,
+                        span: data.beamCD.span
+                    });
+                    
+                    // 保存柱结果（分别保存恒载和活载）
+                    results.columns.push({
+                        floor: floor,
+                        column: 'A',
+                        width: data.colA.width,
+                        height: data.colA.height,
+                        dead: {
+                            axial: N_A_dead,
+                            upperMoment: M_A_upper_dead,
+                            lowerMoment: M_A_lower_dead,
+                            shear: V_A_dead
+                        },
+                        live: {
+                            axial: N_A_live,
+                            upperMoment: M_A_upper_live,
+                            lowerMoment: M_A_lower_live,
+                            shear: V_A_live
+                        }
+                    });
+                    
+                    results.columns.push({
+                        floor: floor,
+                        column: 'B',
+                        width: data.colB.width,
+                        height: data.colB.height,
+                        dead: {
+                            axial: N_B_dead,
+                            upperMoment: M_B_upper_dead,
+                            lowerMoment: M_B_lower_dead,
+                            shear: V_B_dead
+                        },
+                        live: {
+                            axial: N_B_live,
+                            upperMoment: M_B_upper_live,
+                            lowerMoment: M_B_lower_live,
+                            shear: V_B_live
+                        }
+                    });
+                    
+                    results.columns.push({
+                        floor: floor,
+                        column: 'C',
+                        width: data.colC.width,
+                        height: data.colC.height,
+                        dead: {
+                            axial: N_C_dead,
+                            upperMoment: M_C_upper_dead,
+                            lowerMoment: M_C_lower_dead,
+                            shear: V_C_dead
+                        },
+                        live: {
+                            axial: N_C_live,
+                            upperMoment: M_C_upper_live,
+                            lowerMoment: M_C_lower_live,
+                            shear: V_C_live
+                        }
+                    });
+                    
+                    results.columns.push({
+                        floor: floor,
+                        column: 'D',
+                        width: data.colD.width,
+                        height: data.colD.height,
+                        dead: {
+                            axial: N_D_dead,
+                            upperMoment: M_D_upper_dead,
+                            lowerMoment: M_D_lower_dead,
+                            shear: V_D_dead
+                        },
+                        live: {
+                            axial: N_D_live,
+                            upperMoment: M_D_upper_live,
+                            lowerMoment: M_D_lower_live,
+                            shear: V_D_live
+                        }
+                    });
+                    
+                    // 更新最大值（标准值）
+                    const maxPosMoment = Math.max(M_AB_mid_dead+M_AB_mid_live, M_BC_mid_dead+M_BC_mid_live, M_CD_mid_dead+M_CD_mid_live);
+                    const maxNegMoment = Math.min(
+                        deadMoments.M_AB+liveMoments.M_AB, 
+                        deadMoments.M_BC+liveMoments.M_BC, 
+                        deadMoments.M_CD+liveMoments.M_CD, 
+                        deadMoments.M_BA+liveMoments.M_BA, 
+                        deadMoments.M_CB+liveMoments.M_CB, 
+                        deadMoments.M_DC+liveMoments.M_DC
+                    );
+                    const maxAxial = Math.max(N_A_dead+N_A_live, N_B_dead+N_B_live, N_C_dead+N_C_live, N_D_dead+N_D_live);
+                    const maxColMoment = Math.max(
+                        Math.abs(M_A_upper_dead+M_A_upper_live), Math.abs(M_A_lower_dead+M_A_lower_live),
+                        Math.abs(M_B_upper_dead+M_B_upper_live), Math.abs(M_B_lower_dead+M_B_lower_live),
+                        Math.abs(M_C_upper_dead+M_C_upper_live), Math.abs(M_C_lower_dead+M_C_lower_live),
+                        Math.abs(M_D_upper_dead+M_D_upper_live), Math.abs(M_D_lower_dead+M_D_lower_live)
+                    );
+                    
+                    if (maxPosMoment > results.maxBeamPosMoment) results.maxBeamPosMoment = maxPosMoment;
+                    if (maxNegMoment < results.maxBeamNegMoment) results.maxBeamNegMoment = maxNegMoment;
+                    if (maxAxial > results.maxColAxial) results.maxColAxial = maxAxial;
+                    if (maxColMoment > results.maxColMoment) results.maxColMoment = maxColMoment;
+                }
+                
+                // 保存标准值内力结果
+                standardInternalForces = results;
+                
+                // 更新内力计算状态和结果
+                document.getElementById('internalForceStatus').className = 'p-3 rounded-lg status-success';
+                document.getElementById('internalForceStatus').innerHTML = 
+                    '<p class="text-sm"><i class="fa fa-check-circle mr-1"></i> 状态：计算完成</p>';
+                
+                document.getElementById('internalMaxBeamPosM').textContent = results.maxBeamPosMoment.toFixed(2);
+                document.getElementById('internalMaxBeamNegM').textContent = results.maxBeamNegMoment.toFixed(2);
+                document.getElementById('internalMaxColN').textContent = results.maxColAxial.toFixed(2);
+                document.getElementById('internalMaxColM').textContent = results.maxColMoment.toFixed(2);
+                
+                // 内力计算完成后立即更新图表
+                updateChartsWithStandardForces();
+                
+                alert('竖向荷载内力计算完成！');
+                return results;
+            } catch (error) {
+                console.error('内力计算错误:', error);
+                alert('计算出错：' + error.message);
+                return null;
+            }
+        }
+
+        // 执行弯矩二次分配法
+        function performMomentDistribution(M_AB_fixed, M_BA_fixed, M_BC_fixed, M_CB_fixed, M_CD_fixed, M_DC_fixed,
+                                        mu_A_AB, mu_A_col, mu_B_BA, mu_B_BC, mu_B_col,
+                                        mu_C_CB, mu_C_CD, mu_C_col, mu_D_DC, mu_D_col) {
+            // 第一次分配
+            const unbalanced_A = M_AB_fixed;
+            const unbalanced_B = M_BA_fixed + M_BC_fixed;
+            const unbalanced_C = M_CB_fixed + M_CD_fixed;
+            const unbalanced_D = M_DC_fixed;
+            
+            // A节点分配
+            const delta_M_AB = -unbalanced_A * mu_A_AB;
+            const delta_M_A_col = -unbalanced_A * mu_A_col;
+            
+            // B节点分配
+            const delta_M_BA = -unbalanced_B * mu_B_BA;
+            const delta_M_BC = -unbalanced_B * mu_B_BC;
+            const delta_M_B_col = -unbalanced_B * mu_B_col;
+            
+            // C节点分配
+            const delta_M_CB = -unbalanced_C * mu_C_CB;
+            const delta_M_CD = -unbalanced_C * mu_C_CD;
+            const delta_M_C_col = -unbalanced_C * mu_C_col;
+            
+            // D节点分配
+            const delta_M_DC = -unbalanced_D * mu_D_DC;
+            const delta_M_D_col = -unbalanced_D * mu_D_col;
+            
+            // 传递弯矩
+            const delta_M_BA_trans = delta_M_AB / 2;
+            const delta_M_AB_trans = delta_M_BA / 2;
+            const delta_M_CB_trans = delta_M_BC / 2;
+            const delta_M_BC_trans = delta_M_CB / 2;
+            const delta_M_DC_trans = delta_M_CD / 2;
+            const delta_M_CD_trans = delta_M_DC / 2;
+            
+            // 第二次分配
+            const unbalanced_A2 = delta_M_AB_trans;
+            const unbalanced_B2 = delta_M_BA_trans + delta_M_BC_trans;
+            const unbalanced_C2 = delta_M_CB_trans + delta_M_CD_trans;
+            const unbalanced_D2 = delta_M_DC_trans;
+            
+            // A节点第二次分配
+            const delta_M_AB2 = -unbalanced_A2 * mu_A_AB;
+            const delta_M_A_col2 = -unbalanced_A2 * mu_A_col;
+            
+            // B节点第二次分配
+            const delta_M_BA2 = -unbalanced_B2 * mu_B_BA;
+            const delta_M_BC2 = -unbalanced_B2 * mu_B_BC;
+            const delta_M_B_col2 = -unbalanced_B2 * mu_B_col;
+            
+            // C节点第二次分配
+            const delta_M_CB2 = -unbalanced_C2 * mu_C_CB;
+            const delta_M_CD2 = -unbalanced_C2 * mu_C_CD;
+            const delta_M_C_col2 = -unbalanced_C2 * mu_C_col;
+            
+            // D节点第二次分配
+            const delta_M_DC2 = -unbalanced_D2 * mu_D_DC;
+            const delta_M_D_col2 = -unbalanced_D2 * mu_D_col;
+            
+            // 最终梁端弯矩
+            const M_AB = M_AB_fixed + delta_M_AB + delta_M_AB2 + delta_M_BA_trans / 2;
+            const M_BA = M_BA_fixed + delta_M_BA + delta_M_BA2 + delta_M_AB_trans / 2;
+            const M_BC = M_BC_fixed + delta_M_BC + delta_M_BC2 + delta_M_CB_trans / 2;
+            const M_CB = M_CB_fixed + delta_M_CB + delta_M_CB2 + delta_M_BC_trans / 2;
+            const M_CD = M_CD_fixed + delta_M_CD + delta_M_CD2 + delta_M_DC_trans / 2;
+            const M_DC = M_DC_fixed + delta_M_DC + delta_M_DC2 + delta_M_CD_trans / 2;
+            
+            // 最终柱上端弯矩
+            const M_A_col = delta_M_A_col + delta_M_A_col2;
+            const M_B_col = delta_M_B_col + delta_M_B_col2;
+            const M_C_col = delta_M_C_col + delta_M_C_col2;
+            const M_D_col = delta_M_D_col + delta_M_D_col2;
+            
+            return {
+                M_AB, M_BA, M_BC, M_CB, M_CD, M_DC,
+                M_A_col, M_B_col, M_C_col, M_D_col
+            };
+        }
+
+        // 荷载效应基本组合
+        function combineInternalForces() {
+            try {
+                if (!standardInternalForces) {
+                    alert('请先计算竖向荷载内力！');
+                    return;
+                }
+                
+                const gammaG = parseFloat(document.getElementById('gammaG').value);
+                const gammaQ = parseFloat(document.getElementById('gammaQ').value);
+                
+                const results = {
+                    beams: [],
+                    columns: [],
+                    maxBeamPosMoment: 0,
+                    maxBeamNegMoment: 0,
+                    maxColAxial: 0,
+                    maxColMoment: 0
+                };
+                
+                // 组合梁内力
+                standardInternalForces.beams.forEach(beam => {
+                    const combined = {
+                        floor: beam.floor,
+                        beam: beam.beam,
+                        leftMoment: gammaG * beam.dead.leftMoment + gammaQ * beam.live.leftMoment,
+                        midMoment: gammaG * beam.dead.midMoment + gammaQ * beam.live.midMoment,
+                        rightMoment: gammaG * beam.dead.rightMoment + gammaQ * beam.live.rightMoment,
+                        leftShear: gammaG * beam.dead.leftShear + gammaQ * beam.live.leftShear,
+                        rightShear: gammaG * beam.dead.rightShear + gammaQ * beam.live.rightShear,
+                        width: beam.width,
+                        height: beam.height,
+                        span: beam.span
+                    };
+                    
+                    // 计算梁的荷载用于图表
+                    combined.load = (combined.leftShear + combined.rightShear) / combined.span;
+                    
+                    results.beams.push(combined);
+                    
+                    // 更新最大值
+                    if (combined.midMoment > results.maxBeamPosMoment) results.maxBeamPosMoment = combined.midMoment;
+                    if (Math.min(combined.leftMoment, combined.rightMoment) < results.maxBeamNegMoment) 
+                        results.maxBeamNegMoment = Math.min(combined.leftMoment, combined.rightMoment);
+                });
+                
+                // 组合柱内力
+                standardInternalForces.columns.forEach(column => {
+                    const combined = {
+                        floor: column.floor,
+                        column: column.column,
+                        width: column.width,
+                        height: column.height,
+                        axial: gammaG * column.dead.axial + gammaQ * column.live.axial,
+                        upperMoment: gammaG * column.dead.upperMoment + gammaQ * column.live.upperMoment,
+                        lowerMoment: gammaG * column.dead.lowerMoment + gammaQ * column.live.lowerMoment,
+                        shear: gammaG * column.dead.shear + gammaQ * column.live.shear
+                    };
+                    
+                    results.columns.push(combined);
+                    
+                    // 更新最大值
+                    if (combined.axial > results.maxColAxial) results.maxColAxial = combined.axial;
+                    const maxMoment = Math.max(Math.abs(combined.upperMoment), Math.abs(combined.lowerMoment));
+                    if (maxMoment > results.maxColMoment) results.maxColMoment = maxMoment;
+                });
+                
+                // 保存组合后内力结果
+                combinedInternalForces = results;
+                
+                // 更新组合状态和结果
+                document.getElementById('combinationStatus').className = 'p-3 rounded-lg status-success';
+                document.getElementById('combinationStatus').innerHTML = 
+                    '<p class="text-sm"><i class="fa fa-check-circle mr-1"></i> 状态：组合完成</p>';
+                
+                document.getElementById('combMaxBeamPosM').textContent = results.maxBeamPosMoment.toFixed(2);
+                document.getElementById('combMaxBeamNegM').textContent = results.maxBeamNegMoment.toFixed(2);
+                document.getElementById('combMaxColN').textContent = results.maxColAxial.toFixed(2);
+                document.getElementById('combMaxColM').textContent = results.maxColMoment.toFixed(2);
+                
+                // 更新全局概览
+                document.getElementById('maxBeamPosMoment').textContent = results.maxBeamPosMoment.toFixed(2);
+                document.getElementById('maxBeamNegMoment').textContent = results.maxBeamNegMoment.toFixed(2);
+                document.getElementById('maxColAxial').textContent = results.maxColAxial.toFixed(2);
+                document.getElementById('maxColMoment').textContent = results.maxColMoment.toFixed(2);
+                
+                // 组合完成后更新图表为组合后的数据
+                updateChartsWithCombinedForces();
+                
+                alert('内力组合完成！');
+                return results;
+            } catch (error) {
+                console.error('内力组合错误:', error);
+                alert('组合出错：' + error.message);
+                return null;
+            }
+        }
+
+        // 用标准值内力更新图表
+        function updateChartsWithStandardForces() {
+            if (!standardInternalForces) return;
+            
+            // 只显示当前选择楼层的图表
+            const floorBeams = standardInternalForces.beams.filter(beam => beam.floor === currentFloor);
+            
+            floorBeams.forEach(beam => {
+                const numPoints = 50;
+                const xValues = Array.from({length: numPoints}, (_, i) => (i / (numPoints - 1)) * beam.span);
+                
+                // 计算弯矩图数据（标准值总和）
+                const moments = xValues.map(x => {
+                    const M_left = beam.dead.leftMoment + beam.live.leftMoment;
+                    const M_right = beam.dead.rightMoment + beam.live.rightMoment;
+                    const p = (beam.dead.leftShear + beam.dead.rightShear + beam.live.leftShear + beam.live.rightShear) / beam.span;
+                    return M_left + (M_right - M_left) * x / beam.span + p * x * (beam.span - x) / 2;
+                });
+                
+                // 计算剪力图数据（标准值总和）
+                const shears = xValues.map(x => {
+                    const V_left = beam.dead.leftShear + beam.live.leftShear;
+                    const p = (beam.dead.leftShear + beam.dead.rightShear + beam.live.leftShear + beam.live.rightShear) / beam.span;
+                    return V_left - p * x;
+                });
+                
+                // 更新图表
+                const momentChartId = `moment${beam.beam}Chart`;
+                const shearChartId = `shear${beam.beam}Chart`;
+                
+                if (charts[momentChartId]) {
+                    charts[momentChartId].data.labels = xValues.map(x => x.toFixed(1));
+                    charts[momentChartId].data.datasets[0].data = moments;
+                    charts[momentChartId].update();
+                }
+                
+                if (charts[shearChartId]) {
+                    charts[shearChartId].data.labels = xValues.map(x => x.toFixed(1));
+                    charts[shearChartId].data.datasets[0].data = shears;
+                    charts[shearChartId].update();
+                }
+            });
+        }
+
+        // 用组合后内力更新图表
+        function updateChartsWithCombinedForces() {
+            if (!combinedInternalForces) return;
+            
+            // 只显示当前选择楼层的图表
+            const floorBeams = combinedInternalForces.beams.filter(beam => beam.floor === currentFloor);
+            
+            floorBeams.forEach(beam => {
+                const numPoints = 50;
+                const xValues = Array.from({length: numPoints}, (_, i) => (i / (numPoints - 1)) * beam.span);
+                
+                // 计算弯矩图数据
+                const moments = xValues.map(x => {
+                    const M_left = parseFloat(beam.leftMoment);
+                    const M_right = parseFloat(beam.rightMoment);
+                    return M_left + (M_right - M_left) * x / beam.span + beam.load * x * (beam.span - x) / 2;
+                });
+                
+                // 计算剪力图数据
+                const shears = xValues.map(x => {
+                    const V_left = parseFloat(beam.leftShear);
+                    return V_left - beam.load * x;
+                });
+                
+                // 更新图表
+                const momentChartId = `moment${beam.beam}Chart`;
+                const shearChartId = `shear${beam.beam}Chart`;
+                
+                if (charts[momentChartId]) {
+                    charts[momentChartId].data.labels = xValues.map(x => x.toFixed(1));
+                    charts[momentChartId].data.datasets[0].data = moments;
+                    charts[momentChartId].update();
+                }
+                
+                if (charts[shearChartId]) {
+                    charts[shearChartId].data.labels = xValues.map(x => x.toFixed(1));
+                    charts[shearChartId].data.datasets[0].data = shears;
+                    charts[shearChartId].update();
+                }
+            });
+        }
+
+        // 梁配筋计算
+        function calculateBeamReinforcement(M, b, h, c, fc, fy) {
+            if (Math.abs(M) < 0.1) {
+                return {
+                    requiredArea: '0',
+                    suggestedBars: '构造配筋',
+                    actualArea: '0',
+                    ratio: '0'
+                };
+            }
+            
+            const a_s = c + 10;
+            const h0 = h - a_s;
+            const alpha1 = 1.0;
+            
+            const alpha_s = Math.abs(M) * 1e6 / (alpha1 * fc * b * h0 * h0);
+            let xi = 1 - Math.sqrt(1 - 2 * alpha_s);
+            
+            const xi_b = 0.518; // HRB400钢筋
+            if (xi > xi_b) {
+                return {
+                    requiredArea: '超筋',
+                    suggestedBars: '超筋，请增大截面',
+                    actualArea: '-',
+                    ratio: '-'
+                };
+            }
+            
+            const As = alpha1 * fc * b * xi * h0 / fy;
+            const rho_min = Math.max(0.2, 45 * fc / fy) / 100;
+            const As_min = rho_min * b * h;
+            const As_required = Math.max(As, As_min);
+            
+            // 选择钢筋
+            let suggestedBars = '';
+            let actualArea = 0;
+            
+            for (let i = barDiameters.length - 1; i >= 0; i--) {
+                const d = barDiameters[i];
+                const areaPerBar = barAreas[i];
+                const numBars = Math.ceil(As_required / areaPerBar);
+                if (numBars < 2) numBars = 2;
+                
+                const spacing = (b - 2 * c - numBars * d) / (numBars - 1);
+                if (spacing >= 25 && spacing >= d) {
+                    suggestedBars = `${numBars}Φ${d}`;
+                    actualArea = numBars * areaPerBar;
+                    break;
+                }
+            }
+            
+            if (suggestedBars === '') {
+                for (let i = barDiameters.length - 1; i >= 0; i--) {
+                    const d = barDiameters[i];
+                    const areaPerBar = barAreas[i];
+                    const numBars = Math.ceil(As_required / areaPerBar);
+                    if (numBars < 2) numBars = 2;
+                    
+                    const numBottom = Math.ceil(numBars / 2);
+                    const spacingBottom = (b - 2 * c - numBottom * d) / (numBottom - 1);
+                    if (spacingBottom >= 25 && spacingBottom >= d) {
+                        suggestedBars = `${numBars}Φ${d} (两排)`;
+                        actualArea = numBars * areaPerBar;
+                        break;
+                    }
+                }
+            }
+            
+            const ratio = (actualArea / (b * h0) * 100).toFixed(3);
+            
+            return {
+                requiredArea: As_required.toFixed(1),
+                suggestedBars,
+                actualArea: actualArea.toFixed(1),
+                ratio
+            };
+        }
+
+        // 柱配筋计算（对称配筋）
+        function calculateColumnReinforcement(N, M, b, h, c, fc, fy) {
+            if (Math.abs(M) < 0.1 && N < 0.1) {
+                return {
+                    suggestedBars: '构造配筋',
+                    ratio: '0.55'
+                };
+            }
+            
+            const a_s = c + 10;
+            const h0 = h - a_s;
+            const alpha1 = 1.0;
+            
+            // 简化的对称配筋计算
+            const e0 = Math.abs(M) * 1e6 / (N * 1e3 + 0.001); // 避免除以0
+            const ea = Math.max(20, h / 30);
+            const ei = e0 + ea;
+            
+            const xi = N * 1e3 / (alpha1 * fc * b * h0);
+            const xi_b = 0.518; // HRB400钢筋
+            
+            let As;
+            if (xi <= xi_b) {
+                // 大偏心受压
+                const e = ei + h/2 - a_s;
+                As = (N * 1e3 * e - alpha1 * fc * b * h0 * h0 * xi * (1 - xi/2)) / (fy * (h0 - a_s));
+            } else {
+                // 小偏心受压（简化）
+                const e = ei + h/2 - a_s;
+                As = (N * 1e3 * e - alpha1 * fc * b * h0 * h0 * 0.4 * (1 - 0.4/2)) / (fy * (h0 - a_s));
+            }
+            
+            // 最小配筋率
+            const rho_min = 0.55 / 100; // 全部纵向钢筋最小配筋率
+            const As_min = rho_min * b * h;
+            const As_required = Math.max(Math.abs(As), As_min / 2); // 对称配筋，每侧一半
+            
+            // 选择钢筋
+            let suggestedBars = '';
+            let actualArea = 0;
+            
+            for (let i = barDiameters.length - 1; i >= 0; i--) {
+                const d = barDiameters[i];
+                const areaPerBar = barAreas[i];
+                const numBars = Math.ceil(As_required / areaPerBar);
+                if (numBars < 2) numBars = 2;
+                
+                const spacing = (b - 2 * c - numBars * d) / (numBars - 1);
+                if (spacing >= 50 && spacing >= d) {
+                    suggestedBars = `${numBars}Φ${d} (每侧)`;
+                    actualArea = numBars * areaPerBar * 2; // 两侧总面积
+                    break;
+                }
+            }
+            
+            if (suggestedBars === '') {
+                suggestedBars = '需调整截面';
+                actualArea = 0;
+            }
+            
+            const ratio = (actualArea / (b * h) * 100).toFixed(3);
+            
+            return {
+                suggestedBars,
+                ratio
+            };
+        }
+
+        // 更新梁配筋表格
+        function updateBeamsTable(results, fc, fy, cover) {
+            const tableBody = document.getElementById('beamsTable');
+            tableBody.innerHTML = '';
+            
+            results.beams.forEach(beam => {
+                const leftSteel = calculateBeamReinforcement(parseFloat(beam.leftMoment), beam.width, beam.height, cover, fc, fy);
+                const midSteel = calculateBeamReinforcement(parseFloat(beam.midMoment), beam.width, beam.height, cover, fc, fy);
+                const rightSteel = calculateBeamReinforcement(parseFloat(beam.rightMoment), beam.width, beam.height, cover, fc, fy);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-3 py-2">${beam.floor}层</td>
+                    <td class="px-3 py-2 font-medium">${beam.beam}梁</td>
+                    <td class="px-3 py-2">${beam.leftMoment.toFixed(2)}</td>
+                    <td class="px-3 py-2">${beam.midMoment.toFixed(2)}</td>
+                    <td class="px-3 py-2">${beam.rightMoment.toFixed(2)}</td>
+                    <td class="px-3 py-2 text-primary">${leftSteel.suggestedBars}</td>
+                    <td class="px-3 py-2 text-primary">${midSteel.suggestedBars}</td>
+                    <td class="px-3 py-2 text-primary">${rightSteel.suggestedBars}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 更新柱配筋表格
+        function updateColumnsTable(results, fc, fy, cover) {
+            const tableBody = document.getElementById('columnsTable');
+            tableBody.innerHTML = '';
+            
+            results.columns.forEach(column => {
+                const M_max = Math.max(Math.abs(parseFloat(column.upperMoment)), Math.abs(parseFloat(column.lowerMoment)));
+                const steel = calculateColumnReinforcement(
+                    parseFloat(column.axial), 
+                    M_max, 
+                    column.width, 
+                    column.height, 
+                    cover, 
+                    fc, 
+                    fy
+                );
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-3 py-2">${column.floor}层</td>
+                    <td class="px-3 py-2 font-medium">${column.column}柱</td>
+                    <td class="px-3 py-2">${column.width}×${column.height}</td>
+                    <td class="px-3 py-2">${column.axial.toFixed(2)}</td>
+                    <td class="px-3 py-2">${column.upperMoment.toFixed(2)}</td>
+                    <td class="px-3 py-2">${column.lowerMoment.toFixed(2)}</td>
+                    <td class="px-3 py-2 text-primary">${steel.suggestedBars}</td>
+                    <td class="px-3 py-2">${steel.ratio}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 配筋计算主函数
+        function calculateReinforcement() {
+            try {
+                if (!combinedInternalForces) {
+                    alert('请先完成内力组合！');
+                    return;
+                }
+                
+                // 获取全局参数
+                const concrete = document.getElementById('concrete').value;
+                const steel = document.getElementById('steel').value;
+                const cover = parseFloat(document.getElementById('cover').value);
+                
+                const fc = concreteStrength[concrete].fc;
+                const fy = steelStrength[steel].fy;
+                
+                // 更新表格
+                updateBeamsTable(combinedInternalForces, fc, fy, cover);
+                updateColumnsTable(combinedInternalForces, fc, fy, cover);
+                
+                alert('配筋计算完成！');
+            } catch (error) {
+                console.error('配筋计算错误:', error);
+                alert('计算出错：' + error.message);
+            }
+        }
+
+        // 重置函数
+        function reset() {
+            initFloorData();
+            loadFloorData(7);
+            currentFloor = 7;
+            standardInternalForces = null;
+            combinedInternalForces = null;
+            
+            // 更新标签状态
+            document.querySelectorAll('.floor-tab').forEach(tab => {
+                tab.classList.remove('tab-active');
+                tab.classList.add('btn-secondary');
+            });
+            document.querySelector('.floor-tab[data-floor="7"]').classList.add('tab-active');
+            document.querySelector('.floor-tab[data-floor="7"]').classList.remove('btn-secondary');
+            
+            // 重置内力计算状态
+            document.getElementById('internalForceStatus').className = 'p-3 rounded-lg status-pending';
+            document.getElementById('internalForceStatus').innerHTML = 
+                '<p class="text-sm"><i class="fa fa-info-circle mr-1"></i> 状态：未计算</p>';
+            
+            // 重置组合状态
+            document.getElementById('combinationStatus').className = 'p-3 rounded-lg status-pending';
+            document.getElementById('combinationStatus').innerHTML = 
+                '<p class="text-sm"><i class="fa fa-info-circle mr-1"></i> 状态：未组合</p>';
+            
+            // 重置结果
+            document.getElementById('internalMaxBeamPosM').textContent = '--';
+            document.getElementById('internalMaxBeamNegM').textContent = '--';
+            document.getElementById('internalMaxColN').textContent = '--';
+            document.getElementById('internalMaxColM').textContent = '--';
+            
+            document.getElementById('combMaxBeamPosM').textContent = '--';
+            document.getElementById('combMaxBeamNegM').textContent = '--';
+            document.getElementById('combMaxColN').textContent = '--';
+            document.getElementById('combMaxColM').textContent = '--';
+            
+            document.getElementById('maxBeamPosMoment').textContent = '--';
+            document.getElementById('maxBeamNegMoment').textContent = '--';
+            document.getElementById('maxColAxial').textContent = '--';
+            document.getElementById('maxColMoment').textContent = '--';
+            
+            // 重置荷载计算结果
+            document.getElementById('calculatedDeadLoad').textContent = '--';
+            document.getElementById('calculatedLiveLoad').textContent = '--';
+            
+            // 重置表格
+            document.getElementById('beamsTable').innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">请先完成内力组合</td>
+                </tr>
+            `;
+            document.getElementById('columnsTable').innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">请先完成内力组合</td>
+                </tr>
+            `;
+            
+            // 重置图表
+            Object.values(charts).forEach(chart => {
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                chart.update();
+            });
+            
+            alert('已重置所有数据！');
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initFloorData();
+                loadFloorData(7);
+                initCharts();
+                
+                // 楼层标签切换
+                document.querySelectorAll('.floor-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        saveCurrentFloorData();
+                        currentFloor = parseInt(tab.dataset.floor);
+                        loadFloorData(currentFloor);
+                        
+                        // 更新标签状态
+                        document.querySelectorAll('.floor-tab').forEach(t => {
+                            t.classList.remove('tab-active');
+                            t.classList.add('btn-secondary');
+                        });
+                        tab.classList.add('tab-active');
+                        tab.classList.remove('btn-secondary');
+                        
+                        // 如果已经计算了内力，更新图表显示当前楼层
+                        if (combinedInternalForces) {
+                            updateChartsWithCombinedForces();
+                        } else if (standardInternalForces) {
+                            updateChartsWithStandardForces();
+                        }
+                    });
+                });
+                
+                // 结果标签切换
+                document.querySelectorAll('.result-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const targetTab = tab.dataset.tab;
+                        
+                        // 更新标签状态
+                        document.querySelectorAll('.result-tab').forEach(t => {
+                            t.classList.remove('tab-active');
+                            t.classList.add('btn-secondary');
+                        });
+                        tab.classList.add('tab-active');
+                        tab.classList.remove('btn-secondary');
+                        
+                        // 显示对应内容
+                        document.querySelectorAll('.result-content').forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                        document.getElementById(`${targetTab}Tab`).classList.remove('hidden');
+                    });
+                });
+                
+                // 绑定按钮事件
+                document.getElementById('calculateLoadBtn').addEventListener('click', calculateLineLoad);
+                document.getElementById('applyLoadBtn').addEventListener('click', applyLoadToCurrentFloor);
+                document.getElementById('calculateInternalForceBtn').addEventListener('click', calculateVerticalInternalForces);
+                document.getElementById('combineForcesBtn').addEventListener('click', combineInternalForces);
+                document.getElementById('calculateReinforcementBtn').addEventListener('click', calculateReinforcement);
+                document.getElementById('resetBtn').addEventListener('click', reset);
+                
+                // 回车键触发计算
+                document.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            calculateLineLoad();
+                        }
+                    });
+                });
+                
+                console.log('工具初始化成功！');
+            } catch (error) {
+                console.error('初始化错误:', error);
+                alert('初始化出错：' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
